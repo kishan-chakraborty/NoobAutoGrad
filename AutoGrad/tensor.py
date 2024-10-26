@@ -16,7 +16,7 @@ def to_array(obj: Arrayable) -> np.ndarray:
         return np.array(obj)
 
 
-class Parents(NamedTuple):
+class Parent(NamedTuple):
     """
     Object representing the parent corresponding to a Tensor.
     """
@@ -42,7 +42,7 @@ class Tensor:
         self,
         data: Arrayable,
         requires_grad: bool = False,
-        parents: List[Parents] = None,
+        parents: List[Parent] = None,
     ) -> None:
         self.data = to_array(data)
         self.requires_grad = requires_grad
@@ -60,9 +60,15 @@ class Tensor:
     def zero_grad(self) -> None:
         """
         Initialize the gradient value to zero (default)"""
-        self.grad = Tensor(np.zeros_like(self.data))
+        self.grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
 
     def backward(self, grad: "Tensor" = None) -> None:
+        """
+        Backward automatic gradient calculator.
+
+        Args:
+            grad: Incoming gradient.
+        """
         assert self.requires_grad, "cannot backward through a non-requires-grad tensor"
         if grad is None:
             if self.shape == ():
@@ -88,6 +94,10 @@ class Tensor:
         Adds the data of the current Tensor object with the data of another Tensor
         object. Support the + symbol for addition.
 
+        Allowed broadcasting:
+            (m, n) + (m, n) -> (m, n)
+            (m, n) + (1, n) or (1, n) + (m, n) -> (m, n) [Row addition]
+
         Args:
             other (Tensor): The Tensor object to be added to the current Tensor object.
 
@@ -95,7 +105,51 @@ class Tensor:
             Tensor: A new Tensor object with the sum of the data from the current Tensor
             object.
         """
-        return NotImplementedError
+        if self.shape[1] != other.shape[1]:
+            raise ValueError('Invalid dimension, operation not allowed.')
+
+        return add(self, other)
+
+def add(tensor1: Tensor, tensor2: Tensor) -> Tensor:
+    """
+    Adding two tensors and return the result.
+
+    Args:
+        tensor1: The first tensor
+        tensor2: The second tensor
+
+    Returns:
+        tensor1 + tensor2
+    """
+    # Resultant has required grad (RG) = True if any of the tensor has RG True.
+    requires_grad = tensor1.requires_grad or tensor2.requires_grad
+
+    parents: List[Parent] = []
+
+    if tensor1.requires_grad:
+        def grad_fn1(grad: np.ndarray) -> np.ndarray:
+            if grad.shape == tensor1.shape:
+                return grad
+
+            if grad.shape[0] > tensor1.shape[0]:
+                return grad.sum(axis=0)
+
+            return grad
+        parents.append(Parent(tensor1, grad_fn1))
+
+
+    if tensor2.requires_grad:
+        def grad_fn2(grad: np.ndarray) -> np.ndarray:
+            if grad.shape == tensor2.shape:
+                return grad
+
+            if grad.shape[0] > tensor2.shape[0]:
+                return grad.sum(axis=0)
+
+            return grad
+        parents.append(Parent(tensor2, grad_fn2))
+
+    return Tensor(tensor1.data + tensor2.data, requires_grad, parents=parents)
 
 
 def tensor_sum(tensor: Tensor) -> Tensor:
@@ -113,9 +167,9 @@ def tensor_sum(tensor: Tensor) -> Tensor:
             grad is necessarily a zero function so all elements contribute equally to
             its gradient.
             """
-            return grad * np.ones_like(tensor.data)
+            return grad * np.ones_like(tensor.data, dtype=np.float64)
 
-        parents = [Parents(tensor, grad_fn)]
+        parents = [Parent(tensor, grad_fn)]
 
     else:
         parents = None
