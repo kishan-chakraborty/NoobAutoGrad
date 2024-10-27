@@ -4,7 +4,7 @@ from AutoGrad.tensor import Tensor
 
 
 class TestTensorSub(unittest.TestCase):
-    def test_simple_add(self):
+    def test_simple_sub(self):
         t1 = Tensor([1, 2, 3], requires_grad=True)
         t2 = Tensor([4, 5, 6], requires_grad=True)
 
@@ -14,7 +14,7 @@ class TestTensorSub(unittest.TestCase):
         assert t1.grad.data.tolist() == [-1.0, -2.0, -3.0]
         assert t2.grad.data.tolist() == [1.0, 2.0, 3.0]
 
-    def test_broadcast_add(self):
+    def test_broadcast_sub(self):
         # What is broadcasting? A couple of things:
         # If I do t1 + t2 and t1.shape == t2.shape, it's obvious what to do.
         # but I'm also allowed to add 1s to the beginning of either shape.
@@ -38,7 +38,7 @@ class TestTensorSub(unittest.TestCase):
         assert t2.grad.data.tolist() == [[-2, -2, -2]]
         assert t3.grad.data.tolist() == [[-2, -2, -2]]
 
-    def test_broadcast_add2(self):
+    def test_broadcast_sub2(self):
         t1 = Tensor([[1, 2, 3], [4, 5, 6]], requires_grad=True)  # (2, 3)
         t2 = Tensor([[7, 8, 9]], requires_grad=True)  # (1, 3)
 
