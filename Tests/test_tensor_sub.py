@@ -3,7 +3,7 @@ import unittest
 from AutoGrad.tensor import Tensor
 
 
-class TestTensorSum(unittest.TestCase):
+class TestTensorSub(unittest.TestCase):
     def test_simple_add(self):
         t1 = Tensor([1, 2, 3], requires_grad=True)
         t2 = Tensor([4, 5, 6], requires_grad=True)
