@@ -26,6 +26,7 @@ class TestTensorMul(unittest.TestCase):
     def test_broadcast_mul2(self):
         t1 = Tensor([[1, 2, 3], [4, 5, 6]], requires_grad = True)    # (2, 3)
         t2 = Tensor([[7, 8, 9]], requires_grad = True)               # (1, 3)
+        
 
         t3 = t1*t2
         t3.backward(Tensor([[1, 1, 1], [1, 1, 1]]))
