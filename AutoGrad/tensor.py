@@ -232,7 +232,7 @@ def sub(tensor1: Tensor, tensor2: Tensor) -> Tensor:
     Returns:
         tensor1 - tensor2
     """
-    return add(tensor1, neg(tensor2))
+    return tensor1 + neg(tensor2)
 
 
 def mul(tensor1: Tensor, tensor2: Tensor) -> Tensor:

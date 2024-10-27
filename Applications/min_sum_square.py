@@ -1,4 +1,4 @@
-from AutoGrad.tensor import Tensor
+from AutoGrad.tensor import Tensor, mul
 
 
 def min_sum_square(x: Tensor):
@@ -19,9 +19,9 @@ def min_sum_square(x: Tensor):
         x2_sum.backward()
 
         # Update the points
-        del_x = 0.1 * x.grad.data
+        del_x = mul(Tensor(0.1), x.grad)
 
-        x = Tensor(x.data - del_x, requires_grad=True)
+        x = Tensor(x.data - del_x.data, requires_grad=True)
 
         print(x2_sum.data)
 
