@@ -1,3 +1,4 @@
 noob_venv/
 NoobAutoGrad.egg-info
 AutoGrad/__pycache__
+.noob_venv/

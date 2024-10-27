@@ -105,11 +105,32 @@ class Tensor:
             Tensor: A new Tensor object with the sum of the data from the current Tensor
             object.
         """
+        # If both the vectors are 1 dimensional arrays.
+        if self.data.ndim == 1 and other.data.ndim == 1:
+            return add(self, other)
+
+        # If one of the array is > one dimensional then the other must have the same dimension.
         if self.shape[1] != other.shape[1]:
             raise ValueError('Invalid dimension, operation not allowed.')
 
         return add(self, other)
 
+    def __mul__(self, other: "Tensor") ->"Tensor":
+        """
+        Element wise multiplication of the data of two tensor objects.
+        Support the * symbol for multiplication.
+
+        Args:
+            other (Tensor): The Tensor object to be multiplied with the current Tensor object.
+
+        Returns:
+            Tensor: A new Tensor object obtained by element wise multiplication.
+        """
+        if self.data.ndim != other.data.ndim:
+            raise ValueError(f'This operation between dim {self.data.ndim} and {other.data.ndim} is not allowed.')
+        
+        return mul(self, other)
+    
 def add(tensor1: Tensor, tensor2: Tensor) -> Tensor:
     """
     Adding two tensors and return the result.
@@ -151,6 +172,58 @@ def add(tensor1: Tensor, tensor2: Tensor) -> Tensor:
 
     return Tensor(tensor1.data + tensor2.data, requires_grad, parents=parents)
 
+def mul(tensor1: Tensor, tensor2: Tensor) -> Tensor:
+    """
+    Element wise multiplication of two tensors and return the result.
+
+    Args:
+        tensor1: The first tensor
+        tensor2: The second tensor
+
+    Returns:
+        tensor1 * tensor2
+    """
+
+    # Resultant has required grad (RG) = True if any of the tensor has RG True.
+    requires_grad = tensor1.requires_grad or tensor2.requires_grad
+
+    parents: List[Parent] = []
+
+    if tensor1.requires_grad:
+        def grad_fn1(grad: np.ndarray) -> np.ndarray:
+            # Both the tensor has same shape.
+            if tensor1.shape == tensor2.shape:
+                return grad * tensor2.data
+
+            # tensor1 is a row vector
+            if  tensor1.shape[0] < grad.shape[0]:
+                temp = grad * tensor2.data
+                return temp.sum(axis=0)
+
+            # tensor1 is a row vector
+            temp = np.array([tensor2.data[0].tolist() for _ in range(tensor1.shape[0])])
+            return temp
+        parents.append(Parent(tensor1, grad_fn1))
+
+
+    if tensor2.requires_grad:
+        def grad_fn2(grad: np.ndarray) -> np.ndarray:
+            # Both the tensor has same shape.
+            if tensor1.shape == tensor2.shape:
+                return grad * tensor1.data
+
+            # tensor2 is a row vector
+            if  tensor2.shape[0] < grad.shape[0]:
+                temp = grad * tensor1.data
+                return temp.sum(axis=0)
+
+            # tensor1 is a row vector
+            temp = np.array([tensor1.data[0].tolist() for _ in range(tensor2.shape[0])])
+            return temp
+
+        parents.append(Parent(tensor2, grad_fn2))
+
+    return Tensor(tensor1.data * tensor2.data, requires_grad, parents=parents)
 
 def tensor_sum(tensor: Tensor) -> Tensor:
     """
