@@ -12,8 +12,15 @@ def to_array(obj: Arrayable) -> np.ndarray:
     """
     if isinstance(obj, np.ndarray):
         return obj
-    else:
-        return np.array(obj)
+    return np.array(obj)
+
+Tensorable = Union[int, float, "Tensor", np.ndarray]
+
+def ensure_tensor(obj: "Tensor") -> "Tensor":
+    """Make sure that the input object is tensor or can be converted to one."""
+    if isinstance(obj, Tensor):
+        return obj
+    return Tensor(obj)
 
 
 class Parent(NamedTuple):
@@ -89,10 +96,10 @@ class Tensor:
         """
         return tensor_sum(self)
 
-    def __add__(self, other: "Tensor") -> "Tensor":
+    def __add__(self, other) -> "Tensor":
         """
         Adds the data of the current Tensor object with the data of another Tensor
-        object. Support the + symbol for addition.
+        object. Support the + symbol for addition. self + other.
 
         Allowed broadcasting:
             (m, n) + (m, n) -> (m, n)
@@ -105,17 +112,23 @@ class Tensor:
             Tensor: A new Tensor object with the sum of the data from the current Tensor
             object.
         """
-        # If both the vectors are 1 dimensional arrays.
-        if self.data.ndim == 1 and other.data.ndim == 1:
-            return add(self, other)
+        return add(self, ensure_tensor(other))
 
-        # If one of the array is > one dimensional then the other must have the same dimension.
-        if self.shape[1] != other.shape[1]:
-            raise ValueError("Invalid dimension, operation not allowed.")
+    def __radd__(self, other) -> "Tensor":
+        """
+        Exactly same as add but it is other + self.
+        """
+        return add(ensure_tensor(other), self)
 
-        return add(self, other)
+    def __iadd__(self, other) -> "Tensor":
+        """
+        Implementing += other
+        """
+        self.data = self.data + ensure_tensor(other).data
+        self.grad = None
+        return self
 
-    def __sub__(self, other: "Tensor") -> "Tensor":
+    def __sub__(self, other) -> "Tensor":
         """
         Subtract the data of the other Tensor object from the data of current Tensor
         object. Support the - symbol for addition.
@@ -133,15 +146,26 @@ class Tensor:
         """
         # If both the vectors are 1 dimensional arrays.
         if self.data.ndim == 1 and other.data.ndim == 1:
-            return sub(self, other)
+            return sub(self, ensure_tensor(other))
 
         # If one of the array is > one dimensional then the other must have the same dimension.
         if self.shape[1] != other.shape[1]:
             raise ValueError("Invalid dimension, operation not allowed.")
 
-        return sub(self, other)
+        return sub(self, ensure_tensor(other))
 
-    def __mul__(self, other: "Tensor") -> "Tensor":
+    def __rsub__(self, other) -> "Tensor":
+        """Implementing - self"""
+        return sub(ensure_tensor(other), self)
+
+    def __isub__(self, other) -> "Tensor":
+        """Implementing -="""
+        self.data = self.data - ensure_tensor(other).data
+        self.grad = None
+
+        return self
+
+    def __mul__(self, other) -> "Tensor":
         """
         Element wise multiplication of the data of two tensor objects.
         Support the * symbol for multiplication.
@@ -157,8 +181,22 @@ class Tensor:
                 f"This operation between dim {self.data.ndim} and {other.data.ndim} is not allowed."
             )
 
-        return mul(self, other)
+        return mul(self, ensure_tensor(other))
 
+    def __rmul__(self, other) -> "Tensor":
+        """Same as mul, other * self"""
+        return mul(ensure_tensor(other), self)
+
+    def __imul__(self, other) -> "Tensor":
+        """Same as mul, other self *= """
+        self.data = self.data * ensure_tensor(other).data
+        self.grad = None
+
+        return self
+
+    def __neg__(self) -> "Tensor":
+        """ Implementing -self """
+        return neg(self)
 
 def add(tensor1: Tensor, tensor2: Tensor) -> Tensor:
     """
@@ -173,6 +211,7 @@ def add(tensor1: Tensor, tensor2: Tensor) -> Tensor:
     """
     # Resultant has required grad (RG) = True if any of the tensor has RG True.
     requires_grad = tensor1.requires_grad or tensor2.requires_grad
+    data = tensor1.data + tensor2.data
 
     parents: List[Parent] = []
 
@@ -202,7 +241,7 @@ def add(tensor1: Tensor, tensor2: Tensor) -> Tensor:
 
         parents.append(Parent(tensor2, grad_fn2))
 
-    return Tensor(tensor1.data + tensor2.data, requires_grad, parents=parents)
+    return Tensor(data, requires_grad, parents=parents)
 
 
 def neg(tensor: Tensor) -> Tensor:
