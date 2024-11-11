@@ -1,6 +1,6 @@
 import unittest
 
-from AutoGrad.tensor import Tensor
+from AutoGrad.my_module import Tensor
 
 
 class TestTensorSum(unittest.TestCase):

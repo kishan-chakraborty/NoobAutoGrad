@@ -1,4 +1,4 @@
-from AutoGrad.tensor import Tensor, mul
+from AutoGrad.my_module import Tensor, mul
 
 
 def min_sum_square(x: Tensor):
