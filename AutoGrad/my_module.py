@@ -34,7 +34,7 @@ class Parent(NamedTuple):
 
 class Tensor:
     """
-    Tensor module for autodifferentiation.
+    Define our own Tensor data type.
     This is a wrapper over numpy arrays.
     Tracks the previous algebraic operations performed to obtain the tensor.
 
@@ -42,7 +42,7 @@ class Tensor:
         data (numpy.ndarray): The data to be stored in the tensor.
         requires_grad (bool, optional): Whether the tensor requires gradient.
         Defaults to False.
-
+        parents [Parent]: Collection of tensors which has created it.
     """
 
     def __init__(
@@ -51,7 +51,7 @@ class Tensor:
         requires_grad: bool = False,
         parents: List[Parent] = None,
     ) -> None:
-        self.data = ensure_array(data)  
+        self.data = ensure_array(data)
         self.requires_grad = requires_grad
         self.parents = parents or []
         self.shape = self.data.shape
@@ -82,7 +82,7 @@ class Tensor:
 
         Allowed broadcasting:
             (m, n) + (m, n) -> (m, n)
-            (m, n) + (1, n) or (1, n) + (m, n) -> (m, n) [Row addition]
+            (m, n) + (n,) or (n,) + (m, n) -> (m, n) [Row addition]
 
         Args:
             other (Tensor): The Tensor object to be added to the current Tensor object.
@@ -95,7 +95,7 @@ class Tensor:
 
     def __radd__(self, other) -> "Tensor":
         """
-        Exactly same as add but it is other + self.
+        Exactly same as 'add' but it is other + self.
         """
         return add(ensure_tensor(other), self)
 
@@ -126,7 +126,7 @@ class Tensor:
         return sub(self, ensure_tensor(other))
 
     def __rsub__(self, other) -> "Tensor":
-        """Implementing - self"""
+        """Implementing other - self"""
         return sub(ensure_tensor(other), self)
 
     def __isub__(self, other) -> "Tensor":
@@ -206,9 +206,8 @@ def add(tensor1: Tensor, tensor2: Tensor) -> Tensor:
     parents: List[Parent] = []
 
     if tensor1.requires_grad:
-
         def grad_fn1(grad: np.ndarray) -> np.ndarray:
-
+            # 
             n_dims_added = grad.ndim - tensor1.data.ndim
 
             for _ in range(n_dims_added):
